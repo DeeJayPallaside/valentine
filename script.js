@@ -26,6 +26,7 @@
   let audioEnabled = true;
   let audioUnlocked = false;
   let wandSparkleInterval = null;
+  let bgMusic = null;
 
   // --- Sound (WebAudio, no assets) ---
   const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
@@ -104,12 +105,6 @@
   btnYes.addEventListener('click', unlockAudio);
   btnNo.addEventListener('mouseenter', unlockAudio);
   card.addEventListener('click', unlockAudio);
-
-  soundToggle.addEventListener('click', function () {
-    audioEnabled = !audioEnabled;
-    soundToggle.textContent = audioEnabled ? '🔊' : '🔇';
-    soundToggle.setAttribute('aria-label', audioEnabled ? 'Wyłącz dźwięk' : 'Włącz dźwięk');
-  });
 
   // --- Wand sparkle particles (magic dust) ---
   function spawnWandParticle() {
@@ -324,9 +319,40 @@
     gifFallback.hidden = false;
   });
 
+  function playBackgroundMusic() {
+    if (!audioEnabled) return;
+    unlockAudio();
+    try {
+      var src = './audio/background.mp3';
+      bgMusic = new Audio(src);
+      bgMusic.loop = true;
+      bgMusic.volume = 0.5;
+      bgMusic.addEventListener('canplaythrough', function () { bgMusic.play().catch(function () {}); }, { once: true });
+      bgMusic.play().catch(function () {});
+    } catch (_) {}
+  }
+
+  function stopBackgroundMusic() {
+    if (bgMusic) {
+      bgMusic.pause();
+      bgMusic.currentTime = 0;
+      bgMusic = null;
+    }
+  }
+
+  soundToggle.addEventListener('click', function () {
+    audioEnabled = !audioEnabled;
+    soundToggle.textContent = audioEnabled ? '🔊' : '🔇';
+    soundToggle.setAttribute('aria-label', audioEnabled ? 'Wyłącz dźwięk' : 'Włącz dźwięk');
+    if (!audioEnabled) stopBackgroundMusic();
+    else if (yesClicked && bgMusic) bgMusic.play().catch(function () {});
+  });
+
   // --- "Tak" click ---
   btnYes.addEventListener('click', function () {
+    unlockAudio();
     if (yesClicked) {
+      stopBackgroundMusic();
       document.location.reload();
       return;
     }
@@ -334,9 +360,10 @@
     stopWandSparkles();
     easterTooltip.classList.remove('visible');
     easterTooltip.hidden = true;
-    if (audioEnabled && audioUnlocked) {
+    if (audioEnabled) {
       playMagicSound();
       playSuccessSound();
+      playBackgroundMusic();
     }
 
     headline.innerHTML = 'Yaaay, Bejbi! 💖 Wiedziałem!';
@@ -350,6 +377,7 @@
   });
 
   btnAgain.addEventListener('click', function () {
+    stopBackgroundMusic();
     document.location.reload();
   });
 })();
