@@ -28,40 +28,75 @@
   let wandSparkleInterval = null;
   let bgMusic = null;
 
-  // --- Audio (WebAudio) ---
+  // --- AudioManager (WebAudio + prewarm for iOS) ---
   const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
   let audioCtx = null;
+  let masterGain = null;
+  let audioPrewarmed = false;
+
+  function safeRandom() {
+    try {
+      var arr = new Uint32Array(1);
+      crypto.getRandomValues(arr);
+      return arr[0] / 4294967296;
+    } catch (_) { return Math.random(); }
+  }
 
   function unlockAudio() {
     if (audioUnlocked) return;
     audioUnlocked = true;
-    if (AudioCtxClass && !audioCtx) audioCtx = new AudioCtxClass();
+    if (AudioCtxClass && !audioCtx) {
+      audioCtx = new AudioCtxClass();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 1;
+      masterGain.connect(audioCtx.destination);
+    }
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
   }
 
-  document.addEventListener('pointerdown', unlockAudio, { once: true, capture: true });
-  document.addEventListener('keydown', unlockAudio, { once: true, capture: true });
-
-  function playSfx(name) {
-    if (!audioEnabled) return;
-    unlockAudio();
-    if (!audioCtx) return;
+  function prewarmAudio() {
+    if (!audioEnabled || !audioCtx || !masterGain || audioPrewarmed) return;
+    audioPrewarmed = true;
     try {
       var now = audioCtx.currentTime;
-      if (name === 'no') {
-        var osc = audioCtx.createOscillator();
-        var gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.frequency.setValueAtTime(400, now);
-        osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
-        osc.type = 'sine';
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-        osc.start(now);
-        osc.stop(now + 0.15);
-      }
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(masterGain);
+      gain.gain.setValueAtTime(0.0001, now);
+      osc.frequency.setValueAtTime(440, now);
+      osc.start(now);
+      osc.stop(now + 0.01);
+    } catch (_) { audioPrewarmed = false; }
+  }
+
+  document.addEventListener('pointerdown', function () { unlockAudio(); prewarmAudio(); }, { once: true, capture: true });
+  document.addEventListener('touchstart', function () { unlockAudio(); prewarmAudio(); }, { once: true, capture: true });
+  document.addEventListener('keydown', unlockAudio, { once: true, capture: true });
+
+  function playNoSfx() {
+    if (!audioEnabled) return;
+    unlockAudio();
+    if (!audioCtx || !masterGain) return;
+    try {
+      var now = audioCtx.currentTime;
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.frequency.setValueAtTime(420, now);
+      osc.frequency.exponentialRampToValueAtTime(180, now + 0.08);
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.12, now + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.start(now);
+      osc.stop(now + 0.1);
     } catch (_) {}
+  }
+
+  function playSfx(name) {
+    if (name === 'no') playNoSfx();
   }
 
   function playMagicSound() {
@@ -181,79 +216,119 @@
 
   setTimeout(startWandSparkles, 500);
 
-  // --- "Nie" escape logic ---
+  // --- "Nie" escape logic (iOS: many positions, anti-repeat, score) ---
   let noButtonLayoutPos = null;
+  var lastNoPositions = [];
+  var ANTI_REPEAT_DIST = 120;
+  var JITTER = 10;
+  var NUM_CANDIDATES = 35;
 
   function getRects() {
-    const cardR = card.getBoundingClientRect();
-    const yesR = btnYes.getBoundingClientRect();
-    const noR = btnNo.getBoundingClientRect();
-    const rowR = buttonsRow.getBoundingClientRect();
+    var cardR = card.getBoundingClientRect();
+    var yesR = btnYes.getBoundingClientRect();
+    var noR = btnNo.getBoundingClientRect();
     if (!noButtonLayoutPos) noButtonLayoutPos = { left: noR.left, top: noR.top };
-    return { cardR, yesR, noR, rowR };
+    return { cardR, yesR, noR };
   }
 
-  function distance(x1, y1, x2, y2) {
+  function dist(x1, y1, x2, y2) {
     return Math.hypot(x2 - x1, y2 - y1);
   }
 
   function rectsOverlap(a, b, pad) {
-    const p = pad || 8;
+    var p = pad || 8;
     return !(a.right + p < b.left - p || a.left - p > b.right + p ||
              a.bottom + p < b.top - p || a.top - p > b.bottom + p);
   }
 
-  function findBestEscapePosition(cursorX, cursorY) {
-    const { cardR, yesR, noR } = getRects();
-    const noW = noR.width;
-    const noH = noR.height;
-    const pad = 16;
-    const candidates = [];
-    const stepX = (cardR.width - noW - pad * 2) / 6;
-    const stepY = (cardR.height - noH - pad * 2) / 4;
-    for (let i = 0; i <= 6; i++) {
-      for (let j = 0; j <= 4; j++) {
-        const l = cardR.left + pad + i * stepX;
-        const t = cardR.top + pad + j * stepY;
-        if (l + noW > cardR.right - pad || t + noH > cardR.bottom - pad) continue;
-        const noRect = { left: l, top: t, right: l + noW, bottom: t + noH };
-        if (rectsOverlap(noRect, yesR, 24)) continue;
-        const dist = distance(cursorX, cursorY, l + noW / 2, t + noH / 2);
-        candidates.push({ left: l, top: t, dist });
+  function findBestEscapePosition(pointerX, pointerY, retry) {
+    if (retry === undefined) retry = false;
+    var r = getRects();
+    var cardR = r.cardR, yesR = r.yesR, noR = r.noR;
+    var noW = noR.width, noH = noR.height;
+    var pad = 20;
+    var minL = cardR.left + pad;
+    var maxL = cardR.right - noW - pad;
+    var minT = cardR.top + pad;
+    var maxT = cardR.bottom - noH - pad;
+    var centerX = (cardR.left + cardR.right) / 2;
+    var centerY = (cardR.top + cardR.bottom) / 2;
+    var yesCx = (yesR.left + yesR.right) / 2;
+    var yesCy = (yesR.top + yesR.bottom) / 2;
+    var candidates = [];
+    for (var i = 0; i < NUM_CANDIDATES; i++) {
+      var l = minL + safeRandom() * (maxL - minL);
+      var t = minT + safeRandom() * (maxT - minT);
+      var jitterX = (safeRandom() * 2 - 1) * JITTER;
+      var jitterY = (safeRandom() * 2 - 1) * JITTER;
+      l = Math.max(minL, Math.min(maxL, l + jitterX));
+      t = Math.max(minT, Math.min(maxT, t + jitterY));
+      var rect = { left: l, top: t, right: l + noW, bottom: t + noH };
+      if (rectsOverlap(rect, yesR, 28)) continue;
+      var cx = l + noW / 2, cy = t + noH / 2;
+      var distPtr = dist(pointerX, pointerY, cx, cy);
+      var distYes = dist(cx, cy, yesCx, yesCy);
+      var distCenter = dist(cx, cy, centerX, centerY);
+      var tooClose = false;
+      for (var j = 0; j < lastNoPositions.length; j++) {
+        if (dist(cx, cy, lastNoPositions[j].x, lastNoPositions[j].y) < ANTI_REPEAT_DIST) {
+          tooClose = true;
+          break;
+        }
       }
+      if (tooClose) continue;
+      var score = distPtr * 2 + distYes * 1 + distCenter * 0.2;
+      candidates.push({ left: l, top: t, score: score, cx: cx, cy: cy });
     }
-    candidates.sort((a, b) => b.dist - a.dist);
-    return candidates[0] || { left: noR.left, top: noR.top };
+    if (candidates.length === 0) {
+      if (!retry) {
+        lastNoPositions = [];
+        return findBestEscapePosition(pointerX, pointerY, true);
+      }
+      return { left: noR.left, top: noR.top };
+    }
+    candidates.sort(function (a, b) { return b.score - a.score; });
+    var best = candidates[0];
+    lastNoPositions.push({ x: best.cx, y: best.cy });
+    if (lastNoPositions.length > 4) lastNoPositions.shift();
+    return { left: best.left, top: best.top };
   }
 
   function moveNoButton(x, y) {
     if (yesClicked) return;
-    getRects();
-    const pos = findBestEscapePosition(x, y);
-    const relX = pos.left - noButtonLayoutPos.left;
-    const relY = pos.top - noButtonLayoutPos.top;
+    var pos = findBestEscapePosition(x, y);
+    var relX = pos.left - noButtonLayoutPos.left;
+    var relY = pos.top - noButtonLayoutPos.top;
 
     if (prefersReducedMotion) {
-      btnNo.style.transform = `translate(${relX}px, ${relY}px)`;
+      btnNo.style.transform = 'translate(' + relX + 'px,' + relY + 'px)';
       return;
     }
     btnNo.classList.add('shake');
-    setTimeout(() => {
+    var targetTransform = 'translate(' + relX + 'px,' + relY + 'px)';
+    setTimeout(function () {
       btnNo.classList.remove('shake');
-      btnNo.style.transform = `translate(${relX}px, ${relY}px)`;
+      btnNo.style.transition = 'none';
+      btnNo.style.transform = targetTransform;
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          btnNo.style.transition = 'transform 0.12s ease';
+        });
+      });
     }, 80);
   }
 
-  let lastNoSoundTime = 0;
-  var NO_SFX_THROTTLE_MS = 200;
+  var lastNoSoundTime = 0;
+  var NO_SFX_THROTTLE_MS = 180;
+  var lastNoHandleTime = 0;
+  var NO_HANDLE_DEBOUNCE_MS = 50;
 
   function handleNoHover(e) {
     if (yesClicked) return;
     var now = Date.now();
     if (audioEnabled && now - lastNoSoundTime >= NO_SFX_THROTTLE_MS) {
       lastNoSoundTime = now;
-      unlockAudio();
-      playSfx('no');
+      playNoSfx();
     }
     noHoverCount++;
     if (noHoverCount >= 5 && !easterTooltip.classList.contains('visible')) {
@@ -292,10 +367,20 @@
   });
 
   btnNo.addEventListener('mouseenter', handleNoHover);
+  btnNo.addEventListener('pointerenter', handleNoHover);
+  function handleNoInteraction(e) {
+    var t = Date.now();
+    if (t - lastNoHandleTime < NO_HANDLE_DEBOUNCE_MS) return;
+    lastNoHandleTime = t;
+    handleNoHover(e);
+  }
   btnNo.addEventListener('touchstart', function (e) {
     e.preventDefault();
-    if (e.touches.length) handleNoHover(e);
+    if (e.touches.length) handleNoInteraction(e);
   }, { passive: false });
+  btnNo.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'touch') handleNoInteraction(e);
+  });
   document.addEventListener('touchmove', function (e) {
     if (yesClicked) return;
     const touch = Array.from(e.touches).find(t => {

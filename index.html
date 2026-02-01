@@ -35,22 +35,59 @@
   </style>
 </head>
 <body>
-  <a href="./main.html" class="launcher-btn" rel="noopener">
+  <a href="./main.html" class="launcher-btn" id="launcherBtn" rel="noopener">
     Nie boisz się kliknąć..? 🎁
   </a>
   <script>
     (function () {
+      var btn = document.getElementById('launcherBtn');
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      var ctx = null;
+
       function unlock() {
         try {
-          var Ctx = window.AudioContext || window.webkitAudioContext;
-          if (Ctx) {
-            var ctx = new Ctx();
+          if (Ctx && !ctx) {
+            ctx = new Ctx();
             if (ctx.state === 'suspended') ctx.resume();
           }
         } catch (_) {}
       }
+
+      function playClickSparkle() {
+        if (!ctx) return;
+        try {
+          var now = ctx.currentTime;
+          var osc = ctx.createOscillator();
+          var gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.frequency.setValueAtTime(880, now);
+          osc.frequency.exponentialRampToValueAtTime(1320, now + 0.04);
+          osc.type = 'sine';
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(0.15, now + 0.005);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          osc.start(now);
+          osc.stop(now + 0.09);
+        } catch (_) {}
+      }
+
       document.addEventListener('pointerdown', unlock, { once: true, capture: true });
+      document.addEventListener('touchstart', unlock, { once: true, capture: true });
       document.addEventListener('keydown', unlock, { once: true, capture: true });
+
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        unlock();
+        if (ctx && ctx.state === 'suspended') {
+          ctx.resume().then(playClickSparkle).catch(function () {});
+        } else {
+          playClickSparkle();
+        }
+        setTimeout(function () {
+          window.location.href = './main.html';
+        }, 150);
+      });
     })();
   </script>
 </body>
