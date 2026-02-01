@@ -26,7 +26,17 @@
   let audioEnabled = true;
   let audioUnlocked = false;
   let wandSparkleInterval = null;
-  let bgMusic = null;
+  var bgMusic = null;
+
+  (function preloadBgMusic() {
+    try {
+      bgMusic = new Audio('./audio/background.mp3');
+      bgMusic.preload = 'auto';
+      bgMusic.volume = 0.5;
+      bgMusic.loop = true;
+      bgMusic.load();
+    } catch (_) {}
+  })();
 
   // --- Sound (WebAudio, no assets) ---
   const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
@@ -323,12 +333,17 @@
     if (!audioEnabled) return;
     unlockAudio();
     try {
-      var src = './audio/background.mp3';
-      bgMusic = new Audio(src);
-      bgMusic.loop = true;
-      bgMusic.volume = 0.5;
-      bgMusic.addEventListener('canplaythrough', function () { bgMusic.play().catch(function () {}); }, { once: true });
-      bgMusic.play().catch(function () {});
+      if (!bgMusic) {
+        bgMusic = new Audio('./audio/background.mp3');
+        bgMusic.loop = true;
+        bgMusic.volume = 0.5;
+        bgMusic.preload = 'auto';
+        bgMusic.load();
+      }
+      if (bgMusic) {
+        bgMusic.currentTime = 0;
+        bgMusic.play().catch(function () {});
+      }
     } catch (_) {}
   }
 
