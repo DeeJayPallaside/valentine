@@ -28,7 +28,7 @@
   let wandSparkleInterval = null;
   let bgMusic = null;
 
-  // --- Sound (WebAudio, no assets) ---
+  // --- Audio (WebAudio) ---
   const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
   let audioCtx = null;
 
@@ -36,7 +36,32 @@
     if (audioUnlocked) return;
     audioUnlocked = true;
     if (AudioCtxClass && !audioCtx) audioCtx = new AudioCtxClass();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  document.addEventListener('pointerdown', unlockAudio, { once: true, capture: true });
+  document.addEventListener('keydown', unlockAudio, { once: true, capture: true });
+
+  function playSfx(name) {
+    if (!audioEnabled) return;
+    unlockAudio();
+    if (!audioCtx) return;
+    try {
+      var now = audioCtx.currentTime;
+      if (name === 'no') {
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      }
+    } catch (_) {}
   }
 
   function playMagicSound() {
@@ -220,12 +245,15 @@
   }
 
   let lastNoSoundTime = 0;
+  var NO_SFX_THROTTLE_MS = 200;
+
   function handleNoHover(e) {
     if (yesClicked) return;
-    const now = Date.now();
-    if (audioEnabled && audioUnlocked && now - lastNoSoundTime > 350) {
+    var now = Date.now();
+    if (audioEnabled && now - lastNoSoundTime >= NO_SFX_THROTTLE_MS) {
       lastNoSoundTime = now;
-      playMagicSound();
+      unlockAudio();
+      playSfx('no');
     }
     noHoverCount++;
     if (noHoverCount >= 5 && !easterTooltip.classList.contains('visible')) {

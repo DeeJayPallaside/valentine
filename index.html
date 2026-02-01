@@ -38,5 +38,20 @@
   <a href="./main.html" class="launcher-btn" rel="noopener">
     Nie boisz się kliknąć..? 🎁
   </a>
+  <script>
+    (function () {
+      function unlock() {
+        try {
+          var Ctx = window.AudioContext || window.webkitAudioContext;
+          if (Ctx) {
+            var ctx = new Ctx();
+            if (ctx.state === 'suspended') ctx.resume();
+          }
+        } catch (_) {}
+      }
+      document.addEventListener('pointerdown', unlock, { once: true, capture: true });
+      document.addEventListener('keydown', unlock, { once: true, capture: true });
+    })();
+  </script>
 </body>
 </html>
