@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Walentynka 💖</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container" role="main">
+    <!-- Background hearts -->
+    <div class="bg-hearts" aria-hidden="true">
+      <span class="heart">♥</span>
+      <span class="heart">♥</span>
+      <span class="heart">♥</span>
+      <span class="heart">♥</span>
+      <span class="heart">♥</span>
+      <span class="heart">♥</span>
+      <span class="heart">♥</span>
+      <span class="heart">♥</span>
+    </div>
+
+    <div class="card">
+      <!-- Sound toggle -->
+      <button type="button" class="sound-toggle" aria-label="Włącz/wyłącz dźwięk" title="Dźwięk">🔊</button>
+
+      <!-- Wizard SVG + particles layer -->
+      <div class="wizard-layer">
+        <div class="particle-layer" aria-hidden="true"></div>
+        <div class="wizard-wrapper">
+          <svg class="wizard-svg" viewBox="0 0 120 180" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <!-- Magician hat -->
+            <defs>
+              <linearGradient id="hatGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#8B5CF6"/>
+                <stop offset="100%" stop-color="#EC4899"/>
+              </linearGradient>
+              <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FDE68A"/>
+                <stop offset="100%" stop-color="#F59E0B"/>
+              </linearGradient>
+              <filter id="softGlow">
+                <feGaussianBlur stdDeviation="1"/>
+                <feMerge>
+                  <feMergeNode/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+            <!-- Hat brim -->
+            <ellipse cx="60" cy="50" rx="35" ry="8" fill="#8B5CF6" opacity="0.9"/>
+            <!-- Hat cone -->
+            <path d="M30 50 L60 5 L90 50 Z" fill="url(#hatGrad)"/>
+            <!-- Star on hat -->
+            <polygon points="60,20 62,28 70,28 64,33 66,42 60,37 54,42 56,33 50,28 58,28" fill="url(#starGrad)" filter="url(#softGlow)"/>
+            <!-- Dark long hair (girl) - behind face -->
+            <path d="M32 52 Q28 85 30 130 L28 175 L55 178 L60 175 L65 178 L92 175 L90 130 Q92 85 88 52 Q85 42 60 48 Q35 42 32 52 Z" fill="#2D2D2D"/>
+            <!-- Face -->
+            <circle cx="60" cy="95" r="28" fill="#FFE4E6"/>
+            <!-- Eyes -->
+            <ellipse cx="52" cy="92" rx="4" ry="5" fill="#4B5563"/>
+            <ellipse cx="68" cy="92" rx="4" ry="5" fill="#4B5563"/>
+            <circle cx="53" cy="91" r="1.5" fill="white"/>
+            <circle cx="69" cy="91" r="1.5" fill="white"/>
+            <!-- Blush -->
+            <ellipse cx="42" cy="98" rx="6" ry="3" fill="#F9A8D4" opacity="0.6"/>
+            <ellipse cx="78" cy="98" rx="6" ry="3" fill="#F9A8D4" opacity="0.6"/>
+            <!-- Smile -->
+            <path d="M52 105 Q60 112 68 105" stroke="#4B5563" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <!-- Robe -->
+            <path d="M35 120 L30 175 L90 175 L85 120 Q60 130 35 120" fill="#C4B5FD"/>
+            <path d="M50 120 L60 175 L70 120" fill="#A78BFA"/>
+            <!-- Arm with wand -->
+            <g class="wand-arm">
+              <path d="M85 100 L95 75" stroke="#FFE4E6" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <!-- Wand -->
+              <line x1="95" y1="75" x2="115" y2="45" stroke="#8B5CF6" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="115" cy="45" r="4" fill="#FDE68A" filter="url(#softGlow)"/>
+            </g>
+            <!-- Wand sparkle origin -->
+            <circle cx="115" cy="45" r="1" fill="transparent" class="wand-tip"/>
+          </svg>
+        </div>
+        <!-- Floating hearts next to wizard -->
+        <span class="float-heart float-heart-1">♥</span>
+        <span class="float-heart float-heart-2">♥</span>
+        <span class="float-heart float-heart-3">♥</span>
+      </div>
+
+      <!-- Easter egg tooltip -->
+      <div class="easter-tooltip" id="easterTooltip" aria-live="polite" role="status" hidden>
+        Bejbi i tak wiem, że klikniesz TAK 🙊😎
+      </div>
+
+      <!-- Headline -->
+      <h1 class="headline" id="headline">
+        Moja Czarodziejko.. Zostaniesz moją <span class="highlight">WALENTYNKĄ?</span>
+      </h1>
+
+      <!-- Buttons row -->
+      <div class="buttons-row">
+        <button type="button" class="btn btn-yes" id="btnYes" aria-label="Tak, zostanę Twoją walentynką">
+          Tak
+        </button>
+        <button type="button" class="btn btn-no" id="btnNo" aria-label="Nie">
+          Nie
+        </button>
+      </div>
+
+      <!-- Success area (hidden initially) -->
+      <div class="success-area" id="successArea" hidden>
+        <p class="success-message" id="successMessage">Yaaay, Bejbi! 💖 Wiedziałem!</p>
+        <div class="gif-wrapper">
+          <img 
+            src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExOWh5aGtvcm5hcnp0M3Vwb2I0b21vcm5iM2FhaW05eWtpdzZyeTl5MiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/owP7F4Xu8rvCbEkrV4/giphy.gif" 
+            alt="Słodki kotek" 
+            class="success-gif" 
+            id="successGif"
+          >
+          <div class="gif-fallback" id="gifFallback" hidden>
+            <span class="fallback-emoji">😻✨</span>
+          </div>
+        </div>
+        <button type="button" class="btn btn-yes btn-again" id="btnAgain" aria-label="Jeszcze raz">
+          Jeszcze raz!
+        </button>
+      </div>
+    </div>
+
+    <!-- Confetti container -->
+    <div class="confetti-container" id="confettiContainer" aria-hidden="true"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Otwórz walentynkę</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #FDF2F8 0%, #F5F3FF 100%);
+      font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+    .launcher-btn {
+      padding: 1rem 2rem;
+      font-size: 1.2rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #EC4899, #8B5CF6);
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(236, 72, 153, 0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .launcher-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 24px rgba(236, 72, 153, 0.5);
+    }
+    .launcher-btn:active { transform: scale(0.98); }
+  </style>
+</head>
+<body>
+  <a href="index.html" class="launcher-btn" target="_blank" rel="noopener">
+    Nie boisz się kliknąć..? 🎁
+  </a>
+</body>
+</html>
