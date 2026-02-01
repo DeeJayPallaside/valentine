@@ -26,17 +26,7 @@
   let audioEnabled = true;
   let audioUnlocked = false;
   let wandSparkleInterval = null;
-  var bgMusic = null;
-
-  (function preloadBgMusic() {
-    try {
-      bgMusic = new Audio('./audio/background.mp3');
-      bgMusic.preload = 'auto';
-      bgMusic.volume = 0.5;
-      bgMusic.loop = true;
-      bgMusic.load();
-    } catch (_) {}
-  })();
+  let bgMusic = null;
 
   // --- Sound (WebAudio, no assets) ---
   const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
@@ -111,10 +101,6 @@
       heartNoise.stop(now + 0.6);
     } catch (_) {}
   }
-
-  btnYes.addEventListener('click', unlockAudio);
-  btnNo.addEventListener('mouseenter', unlockAudio);
-  card.addEventListener('click', unlockAudio);
 
   // --- Wand sparkle particles (magic dust) ---
   function spawnWandParticle() {
@@ -236,7 +222,6 @@
   let lastNoSoundTime = 0;
   function handleNoHover(e) {
     if (yesClicked) return;
-    unlockAudio();
     const now = Date.now();
     if (audioEnabled && audioUnlocked && now - lastNoSoundTime > 350) {
       lastNoSoundTime = now;
@@ -331,20 +316,20 @@
 
   function playBackgroundMusic() {
     if (!audioEnabled) return;
-    unlockAudio();
+
     try {
-      if (!bgMusic) {
-        bgMusic = new Audio('./audio/background.mp3');
-        bgMusic.loop = true;
-        bgMusic.volume = 0.5;
-        bgMusic.preload = 'auto';
-        bgMusic.load();
-      }
-      if (bgMusic) {
-        bgMusic.currentTime = 0;
-        bgMusic.play().catch(function () {});
-      }
-    } catch (_) {}
+      bgMusic = new Audio('./audio/background.mp3');
+      bgMusic.loop = true;
+      bgMusic.volume = 0.5;
+
+      bgMusic.play().then(function () {
+        audioUnlocked = true;
+      }).catch(function (err) {
+        console.warn("Audio blocked:", err);
+      });
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   function stopBackgroundMusic() {
